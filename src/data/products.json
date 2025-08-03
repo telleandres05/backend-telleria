@@ -1,0 +1,15 @@
+[
+  {
+    "id": "1754251722189",
+    "title": "Mouse gamer",
+    "description": "Mouse RGB con 7 botones",
+    "code": "MG001",
+    "price": 25,
+    "status": true,
+    "stock": 50,
+    "category": "Periféricos",
+    "thumbnails": [
+      "img/mouse1.png"
+    ]
+  }
+]
