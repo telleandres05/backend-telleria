@@ -3,15 +3,16 @@ import productsRouter from './routes/products.router.js'
 import cartsRouter from './routes/carts.router.js'
 
 const app = express()
-app.use(express.json())
+const PORT = 8080
 
+app.use(express.json())
 app.use('/api/products', productsRouter)
 app.use('/api/carts', cartsRouter)
 
-app.listen(8080, () => {
-  console.log('Servidor escuchando en puerto 8080')
-});
-
 app.get('/', (req, res) => {
-  res.send('🚀 API de productos y carritos funcionando')
-});
+  res.send('API de productos y carritos funcionando')
+})
+
+app.listen(PORT, () => {
+  console.log(`Servidor escuchando en puerto ${PORT}`)
+})

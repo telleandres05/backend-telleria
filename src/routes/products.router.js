@@ -5,27 +5,62 @@ const router = Router()
 const manager = new ProductManager()
 
 router.get('/', async (req, res) => {
-  res.json(await manager.getProducts())
+  try {
+    const products = await manager.getProducts()
+    res.json(products)
+  } catch (err) {
+    res.status(500).json({ error: 'Error leyendo productos' })
+  }
 })
 
 router.get('/:pid', async (req, res) => {
-  const product = await manager.getProductById(req.params.pid)
-  product ? res.json(product) : res.status(404).send('Producto no encontrado')
+  try {
+    const product = await manager.getProductById(req.params.pid)
+    if (!product) return res.status(404).json({ error: 'Producto no encontrado' })
+    res.json(product)
+  } catch (err) {
+    res.status(500).json({ error: 'Error buscando producto' })
+  }
 })
 
 router.post('/', async (req, res) => {
-  const product = await manager.addProduct(req.body)
-  res.status(201).json(product)
+  try {
+    const { title, description, code, price, status = true, stock, category, thumbnails = [] } = req.body
+    if (!title || !description || !code || price == null || stock == null || !category) {
+      return res.status(400).json({ error: 'Faltan campos requeridos' })
+    }
+    if (typeof price !== 'number' || typeof stock !== 'number') {
+      return res.status(400).json({ error: 'price y stock deben ser números' })
+    }
+    const created = await manager.addProduct({ title, description, code, price, status, stock, category, thumbnails })
+    res.status(201).json(created)
+  } catch (err) {
+    if (err.message === 'Codigo de producto duplicado') return res.status(400).json({ error: err.message })
+    res.status(500).json({ error: 'Error creando producto' })
+  }
 })
 
 router.put('/:pid', async (req, res) => {
-  const updated = await manager.updateProduct(req.params.pid, req.body)
-  updated ? res.json(updated) : res.status(404).send('Producto no encontrado')
+  try {
+    const updates = { ...req.body }
+    if ('id' in updates) delete updates.id
+    const updated = await manager.updateProduct(req.params.pid, updates)
+    if (!updated) return res.status(404).json({ error: 'Producto no encontrado' })
+    res.json(updated)
+  } catch (err) {
+    if (err.message === 'Codigo de producto duplicado') return res.status(400).json({ error: err.message })
+    res.status(500).json({ error: 'Error actualizando producto' })
+  }
 })
 
 router.delete('/:pid', async (req, res) => {
-  await manager.deleteProduct(req.params.pid)
-  res.status(204).send()
+  try {
+    const deleted = await manager.deleteProduct(req.params.pid)
+    if (!deleted) return res.status(404).json({ error: 'Producto no encontrado' })
+    res.status(204).send()
+  } catch (err) {
+    res.status(500).json({ error: 'Error eliminando producto' })
+  }
 })
 
 export default router
