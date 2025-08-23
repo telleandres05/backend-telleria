@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
   }
 })
 
-// Vista realTimeProducts
+// Vista realTimeP
 router.get('/realtimeproducts', async (req, res) => {
   try {
     const products = await productManager.getProducts()

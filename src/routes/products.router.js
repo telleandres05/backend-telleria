@@ -41,7 +41,7 @@ router.post('/', async (req, res) => {
     const productData = { title, description, code, price, status, stock, category, thumbnails }
     const newProduct = await manager.addProduct(productData)
     
-    // Emitir cambio via socket
+    // Emitir cambio
     const io = req.app.get('io')
     if (io) {
       const updatedProducts = await manager.getProducts()
@@ -75,7 +75,7 @@ router.put('/:pid', async (req, res) => {
       return res.status(404).json({ error: 'Producto no encontrado' })
     }
 
-    // Emitir cambio via socket
+    // Emitir cambio via
     const io = req.app.get('io')
     if (io) {
       const updatedProducts = await manager.getProducts()
@@ -95,7 +95,7 @@ router.delete('/:pid', async (req, res) => {
       return res.status(404).json({ error: 'Producto no encontrado' })
     }
 
-    // Emitir cambio via socket
+    // Emitir cambio
     const io = req.app.get('io')
     if (io) {
       const updatedProducts = await manager.getProducts()
