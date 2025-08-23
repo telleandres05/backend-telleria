@@ -1,0 +1,101 @@
+<h1>Productos en Tiempo Real</h1>
+
+<a href="/">Ver productos estáticos</a>
+
+<div style="margin: 20px 0;">
+    <h2>Crear Producto</h2>
+    <form id="product-form">
+        <div class="form-group">
+            <label>Título:</label>
+            <input type="text" id="title" required>
+        </div>
+        <div class="form-group">
+            <label>Descripción:</label>
+            <textarea id="description" required></textarea>
+        </div>
+        <div class="form-group">
+            <label>Código:</label>
+            <input type="text" id="code" required>
+        </div>
+        <div class="form-group">
+            <label>Precio:</label>
+            <input type="number" id="price" step="0.01" required>
+        </div>
+        <div class="form-group">
+            <label>Stock:</label>
+            <input type="number" id="stock" required>
+        </div>
+        <div class="form-group">
+            <label>Categoría:</label>
+            <input type="text" id="category" required>
+        </div>
+        <button type="submit">Crear Producto</button>
+    </form>
+</div>
+
+<div id="products-container">
+    <!-- carga de productos -->
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io()
+    const productsContainer = document.getElementById('products-container')
+    const productForm = document.getElementById('product-form')
+
+    // Solicitud productos
+    socket.emit('requestProducts')
+
+    // Escuchar productos
+    socket.on('products', (products) => {
+        renderProducts(products)
+    })
+
+    // Escuchar errores
+    socket.on('error', (message) => {
+        alert(message)
+    })
+
+    // Renderizar productos
+    function renderProducts(products) {
+        if (products.length === 0) {
+            productsContainer.innerHTML = '<p>No hay productos disponibles</p>'
+            return
+        }
+
+        productsContainer.innerHTML = products.map(product => `
+            <div class="product">
+                <h3>${product.title}</h3>
+                <p><strong>Descripción:</strong> ${product.description}</p>
+                <p><strong>Código:</strong> ${product.code}</p>
+                <p><strong>Precio:</strong> $${product.price}</p>
+                <p><strong>Stock:</strong> ${product.stock}</p>
+                <p><strong>Categoría:</strong> ${product.category}</p>
+                <p><strong>Estado:</strong> ${product.status ? 'Activo' : 'Inactivo'}</p>
+                <button class="delete-btn" onclick="deleteProduct(${product.id})">Eliminar</button>
+            </div>
+        `).join('')
+    }
+
+    // Creacion de producto
+    productForm.addEventListener('submit', (e) => {
+        e.preventDefault()
+        
+        const productData = {
+            title: document.getElementById('title').value,
+            description: document.getElementById('description').value,
+            code: document.getElementById('code').value,
+            price: document.getElementById('price').value,
+            stock: document.getElementById('stock').value,
+            category: document.getElementById('category').value
+        }
+
+        socket.emit('createProduct', productData)
+        productForm.reset()
+    })
+
+    // Eliminacion producto
+    function deleteProduct(id) {
+        socket.emit('deleteProduct', id)
+    }
+</script>

@@ -6,35 +6,47 @@ const router = Router()
 const cartManager = new CartManager()
 const productManager = new ProductManager()
 
+// POST / - Crear nuevo carrito
 router.post('/', async (req, res) => {
   try {
-    const cart = await cartManager.createCart()
-    res.status(201).json(cart)
+    const newCart = await cartManager.createCart()
+    res.status(201).json(newCart)
   } catch (err) {
-    res.status(500).json({ error: 'Error creando carrito' })
+    res.status(500).json({ error: 'Error interno del servidor' })
   }
 })
 
+// GET /:cid - Listar productos del carrito
 router.get('/:cid', async (req, res) => {
   try {
     const cart = await cartManager.getCartById(req.params.cid)
-    if (!cart) return res.status(404).json({ error: 'Carrito no encontrado' })
+    if (!cart) {
+      return res.status(404).json({ error: 'Carrito no encontrado' })
+    }
     res.json(cart.products)
   } catch (err) {
-    res.status(500).json({ error: 'Error leyendo carrito' })
+    res.status(500).json({ error: 'Error interno del servidor' })
   }
 })
 
+// POST /:cid/product/:pid - Agregar producto al carrito
 router.post('/:cid/product/:pid', async (req, res) => {
   try {
+    // Verificar que el producto existe
     const product = await productManager.getProductById(req.params.pid)
-    if (!product) return res.status(404).json({ error: 'Producto no encontrado' })
-    if (product.stock <= 0) return res.status(400).json({ error: 'Producto sin stock' })
+    if (!product) {
+      return res.status(404).json({ error: 'Producto no encontrado' })
+    }
+
+    // Agregar producto al carrito
     const updatedCart = await cartManager.addProductToCart(req.params.cid, req.params.pid)
-    if (!updatedCart) return res.status(404).json({ error: 'Carrito no encontrado' })
+    if (!updatedCart) {
+      return res.status(404).json({ error: 'Carrito no encontrado' })
+    }
+
     res.json(updatedCart)
   } catch (err) {
-    res.status(500).json({ error: 'Error agregando producto al carrito' })
+    res.status(500).json({ error: 'Error interno del servidor' })
   }
 })
 

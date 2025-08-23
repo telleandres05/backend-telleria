@@ -29,15 +29,9 @@ export default class CartManager {
   }
 
   #generateId(items) {
-    if (!Array.isArray(items) || items.length === 0) return '1'
-    const numericIds = items
-      .map(i => (typeof i.id === 'number' ? i.id : parseInt(i.id)))
-      .filter(Number.isFinite)
-    if (numericIds.length > 0) {
-      const max = Math.max(...numericIds)
-      return String(max + 1)
-    }
-    return String(Date.now())
+    if (!Array.isArray(items) || items.length === 0) return 1
+    const ids = items.map(item => parseInt(item.id)).filter(id => !isNaN(id))
+    return ids.length > 0 ? Math.max(...ids) + 1 : 1
   }
 
   async createCart() {
@@ -58,13 +52,16 @@ export default class CartManager {
     const carts = await this.#readFile()
     const index = carts.findIndex(c => String(c.id) === String(cid))
     if (index === -1) return null
+    
     const cart = carts[index]
-    const prodIndex = cart.products.findIndex(p => String(p.product) === String(pid))
-    if (prodIndex === -1) {
-      cart.products.push({ product: String(pid), quantity: 1 })
+    const productIndex = cart.products.findIndex(p => String(p.product) === String(pid))
+    
+    if (productIndex === -1) {
+      cart.products.push({ product: pid, quantity: 1 })
     } else {
-      cart.products[prodIndex].quantity = Number(cart.products[prodIndex].quantity) + 1
+      cart.products[productIndex].quantity += 1
     }
+    
     carts[index] = cart
     await this.#writeFile(carts)
     return cart
