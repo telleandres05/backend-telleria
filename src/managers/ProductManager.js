@@ -1,72 +1,138 @@
-import fs from 'fs/promises'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import Product from '../models/Product.js'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const PRODUCTS_FILE = path.resolve(__dirname, '../data/products.json')
-
-export default class ProductManager {
-  constructor(filePath = PRODUCTS_FILE) {
-    this.path = filePath
-  }
-
-  async #readFile() {
+class ProductManager {
+  
+  // Obtener productos con paginación, filtros y ordenamiento
+  async getProducts(options = {}) {
     try {
-      const content = await fs.readFile(this.path, 'utf-8')
-      return JSON.parse(content)
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        await fs.writeFile(this.path, JSON.stringify([]))
-        return []
+      const {
+        limit = 10,
+        page = 1,
+        sort,
+        query
+      } = options
+
+      // Configurar filtros
+      const filter = {}
+      
+      if (query) {
+        // Buscar por categoría o disponibilidad
+        if (query.category) {
+          filter.category = { $regex: query.category, $options: 'i' }
+        }
+        if (query.status !== undefined) {
+          filter.status = query.status === 'true'
+        }
+        if (query.stock !== undefined) {
+          if (query.stock === 'available') {
+            filter.stock = { $gt: 0 }
+          } else if (query.stock === 'unavailable') {
+            filter.stock = 0
+          }
+        }
       }
-      throw err
+
+      // Configurar ordenamiento
+      const sortOptions = {}
+      if (sort) {
+        if (sort === 'asc') {
+          sortOptions.price = 1
+        } else if (sort === 'desc') {
+          sortOptions.price = -1
+        }
+      }
+
+      // Opciones de paginación
+      const paginateOptions = {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        sort: Object.keys(sortOptions).length > 0 ? sortOptions : undefined,
+        lean: true
+      }
+
+      const result = await Product.paginate(filter, paginateOptions)
+      
+      return {
+        status: 'success',
+        payload: result.docs,
+        totalPages: result.totalPages,
+        prevPage: result.hasPrevPage ? result.prevPage : null,
+        nextPage: result.hasNextPage ? result.nextPage : null,
+        page: result.page,
+        hasPrevPage: result.hasPrevPage,
+        hasNextPage: result.hasNextPage,
+        prevLink: result.hasPrevPage ? `/api/products?page=${result.prevPage}&limit=${limit}` : null,
+        nextLink: result.hasNextPage ? `/api/products?page=${result.nextPage}&limit=${limit}` : null
+      }
+    } catch (error) {
+      return {
+        status: 'error',
+        message: error.message
+      }
     }
   }
 
-  async #writeFile(data) {
-    await fs.writeFile(this.path, JSON.stringify(data, null, 2))
+  // Obtener producto por ID
+  async getProductById(id) {
+    try {
+      const product = await Product.findById(id).lean()
+      return product
+    } catch (error) {
+      throw new Error('Error al buscar producto: ' + error.message)
+    }
   }
 
-  #generateId(items) {
-    if (!Array.isArray(items) || items.length === 0) return 1
-    const ids = items.map(item => parseInt(item.id)).filter(id => !isNaN(id))
-    return ids.length > 0 ? Math.max(...ids) + 1 : 1
-  }
-
-  async getProducts() {
-    return await this.#readFile()
-  }
-
-  async getProductById(pid) {
-    const products = await this.#readFile()
-    return products.find(p => String(p.id) === String(pid)) || null
-  }
-
+  // Agregar producto
   async addProduct(productData) {
-    const products = await this.#readFile()
-    const id = this.#generateId(products)
-    const newProduct = { id, ...productData }
-    products.push(newProduct)
-    await this.#writeFile(products)
-    return newProduct
+    try {
+      const product = new Product(productData)
+      const savedProduct = await product.save()
+      return savedProduct.toObject()
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new Error('El código del producto ya existe')
+      }
+      throw new Error('Error al crear producto: ' + error.message)
+    }
   }
 
-  async updateProduct(pid, updates) {
-    const products = await this.#readFile()
-    const index = products.findIndex(p => String(p.id) === String(pid))
-    if (index === -1) return null
-    products[index] = { ...products[index], ...updates }
-    await this.#writeFile(products)
-    return products[index]
+  // Actualizar producto
+  async updateProduct(id, updates) {
+    try {
+      const updatedProduct = await Product.findByIdAndUpdate(
+        id,
+        { $set: updates },
+        { new: true, runValidators: true }
+      ).lean()
+      
+      return updatedProduct
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new Error('El código del producto ya existe')
+      }
+      throw new Error('Error al actualizar producto: ' + error.message)
+    }
   }
 
-  async deleteProduct(pid) {
-    const products = await this.#readFile()
-    const index = products.findIndex(p => String(p.id) === String(pid))
-    if (index === -1) return false
-    products.splice(index, 1)
-    await this.#writeFile(products)
-    return true
+  // Eliminar producto
+  async deleteProduct(id) {
+    try {
+      const deletedProduct = await Product.findByIdAndDelete(id)
+      return !!deletedProduct
+    } catch (error) {
+      throw new Error('Error al eliminar producto: ' + error.message)
+    }
+  }
+
+  // Obtener productos simples (para vistas)
+  async getAllProducts() {
+    try {
+      const products = await Product.find().lean()
+      return products
+    } catch (error) {
+      throw new Error('Error al obtener productos: ' + error.message)
+    }
   }
 }
+
+export default ProductManager

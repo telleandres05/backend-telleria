@@ -43,10 +43,10 @@
     const productsContainer = document.getElementById('products-container')
     const productForm = document.getElementById('product-form')
 
-    // Solicitud productos
+    // Solicitud productos al conectar
     socket.emit('requestProducts')
 
-    // Escuchar productos
+    // Escuchar productos actualizados
     socket.on('products', (products) => {
         renderProducts(products)
     })
@@ -77,25 +77,55 @@
         `).join('')
     }
 
-    // Creacion de producto
-    productForm.addEventListener('submit', (e) => {
+    // Crear producto via HTTP (no via socket)
+    productForm.addEventListener('submit', async (e) => {
         e.preventDefault()
         
         const productData = {
             title: document.getElementById('title').value,
             description: document.getElementById('description').value,
             code: document.getElementById('code').value,
-            price: document.getElementById('price').value,
-            stock: document.getElementById('stock').value,
+            price: Number(document.getElementById('price').value),
+            stock: Number(document.getElementById('stock').value),
             category: document.getElementById('category').value
         }
 
-        socket.emit('createProduct', productData)
-        productForm.reset()
+        try {
+            const response = await fetch('/api/products', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(productData)
+            })
+
+            if (!response.ok) {
+                const error = await response.json()
+                throw new Error(error.error || 'Error al crear producto')
+            }
+
+            productForm.reset()
+            // El socket ya recibirá la actualización automáticamente desde el router
+        } catch (error) {
+            alert(error.message)
+        }
     })
 
-    // Eliminacion producto
-    function deleteProduct(id) {
-        socket.emit('deleteProduct', id)
+    // Eliminar producto via HTTP (no via socket)
+    async function deleteProduct(id) {
+        try {
+            const response = await fetch(`/api/products/${id}`, {
+                method: 'DELETE'
+            })
+
+            if (!response.ok) {
+                const error = await response.json()
+                throw new Error(error.error || 'Error al eliminar producto')
+            }
+
+            // El socket ya recibirá la actualización automáticamente desde el router
+        } catch (error) {
+            alert(error.message)
+        }
     }
 </script>
