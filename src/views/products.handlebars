@@ -1,0 +1,53 @@
+<h1 class="mb-4">Listado de Productos</h1>
+
+<div class="filters mb-3">
+  <form method="GET" action="/products" class="d-flex gap-2">
+    <input type="text" name="query" placeholder="Buscar categoría..." value="{{query}}" class="form-control w-25">
+    <select name="sort" class="form-select w-25">
+      <option value="">Ordenar por precio</option>
+      <option value="asc" {{#if (eq sort "asc")}}selected{{/if}}>Menor a mayor</option>
+      <option value="desc" {{#if (eq sort "desc")}}selected{{/if}}>Mayor a menor</option>
+    </select>
+    <button type="submit" class="btn btn-primary">Aplicar</button>
+  </form>
+</div>
+
+<div class="row">
+  {{#each payload}}
+    <div class="col-md-4 mb-4">
+      <div class="card h-100">
+        <img src="{{this.thumbnails.[0]}}" class="card-img-top" alt="{{this.title}}">
+        <div class="card-body">
+          <h5 class="card-title">{{this.title}}</h5>
+          <p class="card-text">{{this.description}}</p>
+          <p><strong>Precio:</strong> ${{this.price}}</p>
+          <p><strong>Categoría:</strong> {{this.category}}</p>
+          <a href="/products/{{this._id}}" class="btn btn-info btn-sm">Ver más</a>
+          <form method="POST" action="/api/carts/default/product/{{this._id}}" class="d-inline">
+            <button type="submit" class="btn btn-success btn-sm">Agregar al carrito</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  {{/each}}
+</div>
+
+<nav class="mt-4">
+  <ul class="pagination">
+    {{#if hasPrevPage}}
+      <li class="page-item">
+        <a class="page-link" href="{{prevLink}}">Anterior</a>
+      </li>
+    {{/if}}
+
+    <li class="page-item active">
+      <span class="page-link">{{page}}</span>
+    </li>
+
+    {{#if hasNextPage}}
+      <li class="page-item">
+        <a class="page-link" href="{{nextLink}}">Siguiente</a>
+      </li>
+    {{/if}}
+  </ul>
+</nav>

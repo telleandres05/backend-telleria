@@ -1,0 +1,16 @@
+<h1>{{product.title}}</h1>
+<img src="{{product.thumbnails.[0]}}" alt="{{product.title}}" class="img-fluid mb-3">
+
+<p><strong>Descripción:</strong> {{product.description}}</p>
+<p><strong>Precio:</strong> ${{product.price}}</p>
+<p><strong>Categoría:</strong> {{product.category}}</p>
+<p><strong>Disponibilidad:</strong> {{#if product.status}}Disponible{{else}}No disponible{{/if}}</p>
+<p><strong>Stock:</strong> {{product.stock}}</p>
+
+<form method="POST" action="/api/carts/default/product/{{product._id}}">
+  <label for="quantity">Cantidad:</label>
+  <input type="number" name="quantity" value="1" min="1" class="form-control w-25 mb-2">
+  <button type="submit" class="btn btn-success">Agregar al carrito</button>
+</form>
+
+<a href="/products" class="btn btn-secondary mt-3">Volver a productos</a>

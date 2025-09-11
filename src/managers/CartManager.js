@@ -14,7 +14,7 @@ class CartManager {
     }
   }
 
-  // Obtener carrito por ID con populate
+  // Obtener carrito por ID 
   async getCartById(cartId) {
     try {
       const cart = await Cart.findById(cartId)
@@ -47,10 +47,8 @@ class CartManager {
       )
 
       if (existingProductIndex >= 0) {
-        // Si existe, incrementar cantidad
         cart.products[existingProductIndex].quantity += quantity
       } else {
-        // Si no existe, agregar nuevo producto
         cart.products.push({
           product: productId,
           quantity: quantity
@@ -64,7 +62,7 @@ class CartManager {
     }
   }
 
-  // NUEVO: Eliminar producto específico del carrito
+  // Eliminar producto específico del carrito
   async removeProductFromCart(cartId, productId) {
     try {
       const cart = await Cart.findById(cartId)
@@ -83,10 +81,9 @@ class CartManager {
     }
   }
 
-  // NUEVO: Actualizar todo el carrito con un array de productos
+  // Actualizar todo el carrito con un array de productos
   async updateCart(cartId, products) {
     try {
-      // Validar que todos los productos existen
       for (const item of products) {
         const productExists = await Product.findById(item.product)
         if (!productExists) {
@@ -110,7 +107,7 @@ class CartManager {
     }
   }
 
-  // NUEVO: Actualizar cantidad de un producto específico
+  // Actualizar cantidad de un producto específico
   async updateProductQuantity(cartId, productId, quantity) {
     try {
       if (quantity <= 0) {
@@ -138,7 +135,7 @@ class CartManager {
     }
   }
 
-  // NUEVO: Limpiar carrito (eliminar todos los productos)
+  // Limpiar carrito
   async clearCart(cartId) {
     try {
       const updatedCart = await Cart.findByIdAndUpdate(

@@ -2,7 +2,7 @@ import express from 'express'
 import handlebars from 'express-handlebars'
 import { Server } from 'socket.io'
 import { createServer } from 'http'
-import connectDB from './config/database.js'  // ← ESTA LÍNEA FALTABA
+import connectDB from './config/database.js'
 import productsRouter from './routes/products.router.js'
 import cartsRouter from './routes/carts.router.js'
 import viewsRouter from './routes/views.router.js'
@@ -14,11 +14,18 @@ const server = createServer(app)
 const io = new Server(server)
 const productManager = new ProductManager()
 
-// Conectar a MongoDB ← ESTA LÍNEA FALTABA
+// Conectar a MongoDB
 connectDB()
 
-// Handlebars
-app.engine('handlebars', handlebars.engine())
+// Configuración Handlebars con helpers mínimos
+const hbs = handlebars.create({
+  helpers: {
+    eq: (a, b) => a === b,
+    multiply: (a, b) => a * b
+  }
+})
+
+app.engine('handlebars', hbs.engine)
 app.set('views', './src/views')
 app.set('view engine', 'handlebars')
 
@@ -38,11 +45,10 @@ app.use('/api/products', productsRouter)
 app.use('/api/carts', cartsRouter)
 app.use('/', viewsRouter)
 
-// Socket - SOLO para escuchar conexiones y enviar datos iniciales
+// Socket.io
 io.on('connection', (socket) => {
   console.log('Cliente conectado')
 
-  // SOLO enviar productos al conectar
   socket.on('requestProducts', async () => {
     try {
       const products = await productManager.getAllProducts()
@@ -53,6 +59,7 @@ io.on('connection', (socket) => {
   })
 })
 
+// Servidor
 server.listen(PORT, () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT}`)
   console.log(`📱 Vistas: http://localhost:${PORT}`)
