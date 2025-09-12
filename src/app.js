@@ -1,5 +1,5 @@
 import express from 'express'
-import handlebars from 'express-handlebars'
+import { engine } from 'express-handlebars'
 import { Server } from 'socket.io'
 import { createServer } from 'http'
 import connectDB from './config/database.js'
@@ -17,15 +17,21 @@ const productManager = new ProductManager()
 // Conectar a MongoDB
 connectDB()
 
-// Configuración Handlebars con helpers mínimos
-const hbs = handlebars.create({
+// Configurar Handlebars con helpers necesarios
+const hbs = engine({
   helpers: {
     eq: (a, b) => a === b,
-    multiply: (a, b) => a * b
+    gt: (a, b) => a > b,
+    gte: (a, b) => a >= b,
+    lt: (a, b) => a < b,
+    lte: (a, b) => a <= b,
+    and: (a, b) => a && b,
+    or: (a, b) => a || b,
+    not: (a) => !a
   }
 })
 
-app.engine('handlebars', hbs.engine)
+app.engine('handlebars', hbs)
 app.set('views', './src/views')
 app.set('view engine', 'handlebars')
 
@@ -45,10 +51,11 @@ app.use('/api/products', productsRouter)
 app.use('/api/carts', cartsRouter)
 app.use('/', viewsRouter)
 
-// Socket.io
+// Socket - SOLO para escuchar conexiones y enviar datos iniciales
 io.on('connection', (socket) => {
   console.log('Cliente conectado')
-
+  
+  // SOLO enviar productos al conectar
   socket.on('requestProducts', async () => {
     try {
       const products = await productManager.getAllProducts()
@@ -59,7 +66,6 @@ io.on('connection', (socket) => {
   })
 })
 
-// Servidor
 server.listen(PORT, () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT}`)
   console.log(`📱 Vistas: http://localhost:${PORT}`)

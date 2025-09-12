@@ -1,53 +1,382 @@
-<h1 class="mb-4">Listado de Productos</h1>
+{{#> layout}}
 
-<div class="filters mb-3">
-  <form method="GET" action="/products" class="d-flex gap-2">
-    <input type="text" name="query" placeholder="Buscar categoría..." value="{{query}}" class="form-control w-25">
-    <select name="sort" class="form-select w-25">
-      <option value="">Ordenar por precio</option>
-      <option value="asc" {{#if (eq sort "asc")}}selected{{/if}}>Menor a mayor</option>
-      <option value="desc" {{#if (eq sort "desc")}}selected{{/if}}>Mayor a menor</option>
-    </select>
-    <button type="submit" class="btn btn-primary">Aplicar</button>
-  </form>
-</div>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: #f8f9fa;
+    color: #333;
+  }
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  h1 {
+    margin: 0 0 10px 0;
+    font-weight: 600;
+    color: #2c3e50;
+  }
+  .subtitle {
+    color: #7f8c8d;
+    font-size: 16px;
+  }
+  .filters {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .filter-group label {
+    font-weight: 500;
+    color: #555;
+  }
+  select, input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  .btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.2s;
+  }
+  .btn:hover {
+    background: #2980b9;
+  }
+  .btn-clear {
+    background: #95a5a6;
+  }
+  .btn-clear:hover {
+    background: #7f8c8d;
+  }
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+  .product-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .product-image {
+    height: 180px;
+    background: #ecf0f1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #bdc3c7;
+    font-size: 14px;
+  }
+  .product-info {
+    padding: 20px;
+  }
+  .product-title {
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: #2c3e50;
+  }
+  .product-description {
+    color: #7f8c8d;
+    font-size: 14px;
+    margin: 0 0 12px 0;
+    line-height: 1.4;
+  }
+  .product-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 15px 0;
+  }
+  .product-price {
+    font-weight: 600;
+    font-size: 18px;
+    color: #27ae60;
+  }
+  .product-stock {
+    font-size: 12px;
+    color: #7f8c8d;
+  }
+  .product-category {
+    background: #ecf0f1;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .product-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-small {
+    padding: 8px 12px;
+    font-size: 12px;
+    flex: 1;
+    text-align: center;
+  }
+  .btn-secondary {
+    background: #95a5a6;
+    color: white;
+  }
+  .btn-secondary:hover {
+    background: #7f8c8d;
+  }
+  .pagination {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+  .pagination-info {
+    margin-bottom: 15px;
+    color: #7f8c8d;
+  }
+  .pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+  }
+  .page-btn {
+    padding: 8px 12px;
+    background: #ecf0f1;
+    color: #555;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+  .page-btn:hover:not(.disabled) {
+    background: #d5dbdb;
+  }
+  .page-btn.current {
+    background: #3498db;
+    color: white;
+  }
+  .page-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .no-products {
+    text-align: center;
+    padding: 60px 20px;
+    color: #7f8c8d;
+  }
+  .nav-links {
+    margin-bottom: 30px;
+    text-align: center;
+  }
+  .nav-links a {
+    margin: 0 10px;
+    color: #3498db;
+    text-decoration: none;
+  }
+  .nav-links a:hover {
+    text-decoration: underline;
+  }
+</style>
 
-<div class="row">
-  {{#each payload}}
-    <div class="col-md-4 mb-4">
-      <div class="card h-100">
-        <img src="{{this.thumbnails.[0]}}" class="card-img-top" alt="{{this.title}}">
-        <div class="card-body">
-          <h5 class="card-title">{{this.title}}</h5>
-          <p class="card-text">{{this.description}}</p>
-          <p><strong>Precio:</strong> ${{this.price}}</p>
-          <p><strong>Categoría:</strong> {{this.category}}</p>
-          <a href="/products/{{this._id}}" class="btn btn-info btn-sm">Ver más</a>
-          <form method="POST" action="/api/carts/default/product/{{this._id}}" class="d-inline">
-            <button type="submit" class="btn btn-success btn-sm">Agregar al carrito</button>
-          </form>
+<div class="container">
+  <div class="header">
+    <h1>Catálogo de Productos</h1>
+    <p class="subtitle">Explora nuestra selección de productos</p>
+  </div>
+
+  <div class="nav-links">
+    <a href="/realtimeproducts">Gestión en Tiempo Real</a>
+    <a href="/carts/{{defaultCartId}}">Ver Carrito</a>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filters">
+    <form method="GET" action="/products" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; width: 100%;">
+      
+      <div class="filter-group">
+        <label for="category">Categoría:</label>
+        <select name="category" id="category">
+          <option value="">Todas las categorías</option>
+          <option value="electronics" {{#if (eq query.category 'electronics')}}selected{{/if}}>Electronics</option>
+          <option value="clothing" {{#if (eq query.category 'clothing')}}selected{{/if}}>Clothing</option>
+          <option value="home" {{#if (eq query.category 'home')}}selected{{/if}}>Home</option>
+          <option value="sports" {{#if (eq query.category 'sports')}}selected{{/if}}>Sports</option>
+          <option value="books" {{#if (eq query.category 'books')}}selected{{/if}}>Books</option>
+          <option value="technology" {{#if (eq query.category 'technology')}}selected{{/if}}>Technology</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="stock">Disponibilidad:</label>
+        <select name="stock" id="stock">
+          <option value="">Todos</option>
+          <option value="available" {{#if (eq query.stock 'available')}}selected{{/if}}>Disponible</option>
+          <option value="unavailable" {{#if (eq query.stock 'unavailable')}}selected{{/if}}>Sin stock</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="sort">Ordenar por precio:</label>
+        <select name="sort" id="sort">
+          <option value="">Sin ordenar</option>
+          <option value="asc" {{#if (eq sort 'asc')}}selected{{/if}}>Menor a mayor</option>
+          <option value="desc" {{#if (eq sort 'desc')}}selected{{/if}}>Mayor a menor</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="limit">Productos por página:</label>
+        <select name="limit" id="limit">
+          <option value="5" {{#if (eq limit 5)}}selected{{/if}}>5</option>
+          <option value="10" {{#if (eq limit 10)}}selected{{/if}}>10</option>
+          <option value="20" {{#if (eq limit 20)}}selected{{/if}}>20</option>
+        </select>
+      </div>
+
+      <input type="hidden" name="page" value="1">
+
+      <button type="submit" class="btn">Aplicar Filtros</button>
+      <a href="/products" class="btn btn-clear">Limpiar</a>
+    </form>
+  </div>
+
+  
+  {{#if payload.length}}
+    <div class="products-grid">
+      {{#each payload}}
+        <div class="product-card">
+          <div class="product-image">
+            {{#if thumbnails.0}}
+              <img src="{{thumbnails.0}}" alt="{{title}}" style="width: 100%; height: 100%; object-fit: cover;">
+            {{else}}
+              Sin imagen
+            {{/if}}
+          </div>
+          
+          <div class="product-info">
+            <h3 class="product-title">{{title}}</h3>
+            <p class="product-description">{{description}}</p>
+            
+            <div class="product-category">{{category}}</div>
+            
+            <div class="product-meta">
+              <div class="product-price">${{price}}</div>
+              <div class="product-stock">
+                {{#if (gt stock 0)}}
+                  {{stock}} disponibles
+                {{else}}
+                  Sin stock
+                {{/if}}
+              </div>
+            </div>
+            
+            <div class="product-actions">
+              <a href="/products/{{_id}}" class="btn btn-small btn-secondary">Ver Detalles</a>
+              {{#if (gt stock 0)}}
+                <button class="btn btn-small" onclick="addToCart('{{_id}}')">Agregar al Carrito</button>
+              {{else}}
+                <button class="btn btn-small" disabled style="opacity: 0.5; cursor: not-allowed;">Sin Stock</button>
+              {{/if}}
+            </div>
+          </div>
         </div>
+      {{/each}}
+    </div>
+  {{else}}
+    <div class="no-products">
+      <h3>No se encontraron productos</h3>
+      <p>Intenta ajustar los filtros de búsqueda</p>
+    </div>
+  {{/if}}
+
+  <!-- Paginación -->
+  {{#if (gt totalPages 1)}}
+    <div class="pagination">
+      <div class="pagination-info">
+        Página {{page}} de {{totalPages}} ({{payload.length}} productos)
+      </div>
+      
+      <div class="pagination-controls">
+        {{#if hasPrevPage}}
+          <a href="{{prevLink}}" class="page-btn">‹ Anterior</a>
+        {{else}}
+          <span class="page-btn disabled">‹ Anterior</span>
+        {{/if}}
+        
+        <span class="page-btn current">{{page}}</span>
+        
+        {{#if hasNextPage}}
+          <a href="{{nextLink}}" class="page-btn">Siguiente ›</a>
+        {{else}}
+          <span class="page-btn disabled">Siguiente ›</span>
+        {{/if}}
       </div>
     </div>
-  {{/each}}
+  {{/if}}
 </div>
 
-<nav class="mt-4">
-  <ul class="pagination">
-    {{#if hasPrevPage}}
-      <li class="page-item">
-        <a class="page-link" href="{{prevLink}}">Anterior</a>
-      </li>
-    {{/if}}
+<script>
+async function addToCart(productId) {
+  try {
+    // Crear carrito si no existe
+    let cartId = localStorage.getItem('cartId');
+    if (!cartId) {
+      const cartResponse = await fetch('/api/carts', { method: 'POST' });
+      const cartData = await cartResponse.json();
+      cartId = cartData._id;
+      localStorage.setItem('cartId', cartId);
+    }
 
-    <li class="page-item active">
-      <span class="page-link">{{page}}</span>
-    </li>
+    // Agregar producto al carrito
+    const response = await fetch(`/api/carts/${cartId}/product/${productId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ quantity: 1 })
+    });
 
-    {{#if hasNextPage}}
-      <li class="page-item">
-        <a class="page-link" href="{{nextLink}}">Siguiente</a>
-      </li>
-    {{/if}}
-  </ul>
-</nav>
+    if (response.ok) {
+      alert('Producto agregado al carrito');
+    } else {
+      const error = await response.json();
+      alert('Error: ' + error.error);
+    }
+  } catch (error) {
+    alert('Error al agregar producto al carrito');
+    console.error(error);
+  }
+}
+</script>
+
+{{/layout}}

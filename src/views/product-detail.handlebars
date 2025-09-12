@@ -1,16 +1,536 @@
-<h1>{{product.title}}</h1>
-<img src="{{product.thumbnails.[0]}}" alt="{{product.title}}" class="img-fluid mb-3">
+{{#> layout}}
 
-<p><strong>Descripción:</strong> {{product.description}}</p>
-<p><strong>Precio:</strong> ${{product.price}}</p>
-<p><strong>Categoría:</strong> {{product.category}}</p>
-<p><strong>Disponibilidad:</strong> {{#if product.status}}Disponible{{else}}No disponible{{/if}}</p>
-<p><strong>Stock:</strong> {{product.stock}}</p>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: #f8f9fa;
+    color: #333;
+  }
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .nav-links {
+    margin-bottom: 30px;
+  }
+  .nav-links a {
+    color: #3498db;
+    text-decoration: none;
+    margin-right: 15px;
+    font-size: 14px;
+  }
+  .nav-links a:hover {
+    text-decoration: underline;
+  }
+  .product-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+  }
+  .product-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    padding: 40px;
+  }
+  @media (max-width: 768px) {
+    .product-content {
+      grid-template-columns: 1fr;
+      gap: 30px;
+      padding: 20px;
+    }
+  }
+  .product-gallery {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  .main-image {
+    width: 100%;
+    height: 400px;
+    background: #ecf0f1;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #bdc3c7;
+    font-size: 16px;
+    overflow: hidden;
+  }
+  .main-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+  .thumbnail-gallery {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 5px 0;
+  }
+  .thumbnail {
+    width: 60px;
+    height: 60px;
+    background: #ecf0f1;
+    border-radius: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+    overflow: hidden;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .thumbnail:hover,
+  .thumbnail.active {
+    border-color: #3498db;
+  }
+  .thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .product-info {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .product-header h1 {
+    margin: 0 0 10px 0;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 28px;
+    line-height: 1.2;
+  }
+  .product-code {
+    color: #7f8c8d;
+    font-size: 14px;
+    margin: 0;
+  }
+  .product-category {
+    background: #3498db;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    align-self: flex-start;
+    font-weight: 600;
+  }
+  .product-price {
+    font-size: 32px;
+    font-weight: 700;
+    color: #27ae60;
+    margin: 0;
+  }
+  .product-description {
+    color: #555;
+    line-height: 1.6;
+    font-size: 16px;
+  }
+  .product-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+  }
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .meta-label {
+    font-size: 12px;
+    color: #7f8c8d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  .meta-value {
+    font-weight: 600;
+    color: #2c3e50;
+  }
+  .stock-indicator {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .stock-available {
+    background: #d5f4e6;
+    color: #27ae60;
+  }
+  .stock-low {
+    background: #ffeaa7;
+    color: #d63031;
+  }
+  .stock-out {
+    background: #fab1a0;
+    color: #e74c3c;
+  }
+  .purchase-section {
+    border-top: 1px solid #ecf0f1;
+    padding: 30px 0 0 0;
+    margin-top: 20px;
+  }
+  .quantity-selector {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+  .quantity-selector label {
+    font-weight: 600;
+    color: #555;
+  }
+  .quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 4px;
+  }
+  .qty-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+  .qty-btn:hover:not(:disabled) {
+    background: #2980b9;
+  }
+  .qty-btn:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+  }
+  .quantity-input {
+    border: none;
+    background: transparent;
+    width: 50px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 16px;
+  }
+  .action-buttons {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 15px 30px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    min-width: 160px;
+  }
+  .btn-primary {
+    background: #3498db;
+    color: white;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: #2980b9;
+    transform: translateY(-1px);
+  }
+  .btn-primary:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn-secondary {
+    background: #ecf0f1;
+    color: #555;
+  }
+  .btn-secondary:hover {
+    background: #d5dbdb;
+  }
+  .status-message {
+    margin-top: 15px;
+    padding: 10px 15px;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  .success {
+    background: #d5f4e6;
+    color: #27ae60;
+    border: 1px solid #27ae60;
+  }
+  .error {
+    background: #fab1a0;
+    color: #e74c3c;
+    border: 1px solid #e74c3c;
+  }
+  .product-not-found {
+    text-align: center;
+    padding: 60px 20px;
+    color: #7f8c8d;
+  }
+  .product-not-found h2 {
+    color: #95a5a6;
+    margin: 0 0 15px 0;
+  }
+  .back-btn {
+    background: #95a5a6;
+    color: white;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 20px;
+  }
+  .back-btn:hover {
+    background: #7f8c8d;
+  }
+</style>
 
-<form method="POST" action="/api/carts/default/product/{{product._id}}">
-  <label for="quantity">Cantidad:</label>
-  <input type="number" name="quantity" value="1" min="1" class="form-control w-25 mb-2">
-  <button type="submit" class="btn btn-success">Agregar al carrito</button>
-</form>
+<div class="container">
+  <div class="nav-links">
+    <a href="/products">← Volver al Catálogo</a>
+    <a href="/realtimeproducts">Gestión de Productos</a>
+  </div>
 
-<a href="/products" class="btn btn-secondary mt-3">Volver a productos</a>
+  {{#if product}}
+    <div class="product-container">
+      <div class="product-content">
+        
+        <!-- Galería de imágenes -->
+        <div class="product-gallery">
+          <div class="main-image" id="mainImage">
+            {{#if product.thumbnails.0}}
+              <img src="{{product.thumbnails.0}}" alt="{{product.title}}" id="currentImage">
+            {{else}}
+              Sin imagen disponible
+            {{/if}}
+          </div>
+          
+          {{#if (gt product.thumbnails.length 1)}}
+            <div class="thumbnail-gallery">
+              {{#each product.thumbnails}}
+                <div class="thumbnail {{#if @first}}active{{/if}}" onclick="changeImage('{{this}}', this)">
+                  <img src="{{this}}" alt="{{../product.title}}">
+                </div>
+              {{/each}}
+            </div>
+          {{/if}}
+        </div>
+
+        <!-- Información del producto -->
+        <div class="product-info">
+          <div class="product-header">
+            <h1>{{product.title}}</h1>
+            <p class="product-code">Código: {{product.code}}</p>
+          </div>
+
+          <div class="product-category">{{product.category}}</div>
+
+          <div class="product-price">${{product.price}}</div>
+
+          <div class="product-description">
+            {{product.description}}
+          </div>
+
+          <div class="product-meta">
+            <div class="meta-item">
+              <span class="meta-label">Disponibilidad</span>
+              <div class="meta-value">
+                {{#if (gt product.stock 0)}}
+                  {{#if (gte product.stock 10)}}
+                    <span class="stock-indicator stock-available">✓ En stock ({{product.stock}} unidades)</span>
+                  {{else}}
+                    <span class="stock-indicator stock-low">⚠ Pocas unidades ({{product.stock}} disponibles)</span>
+                  {{/if}}
+                {{else}}
+                  <span class="stock-indicator stock-out">✗ Sin stock</span>
+                {{/if}}
+              </div>
+            </div>
+            
+            <div class="meta-item">
+              <span class="meta-label">Estado</span>
+              <span class="meta-value">
+                {{#if product.status}}
+                  Activo
+                {{else}}
+                  Inactivo
+                {{/if}}
+              </span>
+            </div>
+          </div>
+
+          <!-- Sección de compra -->
+          <div class="purchase-section">
+            {{#if (and product.status (gt product.stock 0))}}
+              <div class="quantity-selector">
+                <label for="quantity">Cantidad:</label>
+                <div class="quantity-controls">
+                  <button type="button" class="qty-btn" onclick="changeQuantity(-1)">−</button>
+                  <input type="number" id="quantity" class="quantity-input" value="1" min="1" max="{{product.stock}}" readonly>
+                  <button type="button" class="qty-btn" onclick="changeQuantity(1)">+</button>
+                </div>
+              </div>
+
+              <div class="action-buttons">
+                <button class="btn btn-primary" onclick="addToCart()">
+                  Agregar al Carrito
+                </button>
+                <a href="/products" class="btn btn-secondary">
+                  Seguir Comprando
+                </a>
+              </div>
+            {{else}}
+              <div class="action-buttons">
+                <button class="btn btn-primary" disabled>
+                  {{#if product.status}}
+                    Sin Stock
+                  {{else}}
+                    Producto No Disponible
+                  {{/if}}
+                </button>
+                <a href="/products" class="btn btn-secondary">
+                  Ver Otros Productos
+                </a>
+              </div>
+            {{/if}}
+
+            <div id="statusMessage" class="status-message" style="display: none;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  {{else}}
+    <!-- Producto no encontrado -->
+    <div class="product-container">
+      <div class="product-not-found">
+        <h2>Producto no encontrado</h2>
+        <p>El producto que buscas no existe o ha sido eliminado.</p>
+        <a href="/products" class="back-btn">Volver al Catálogo</a>
+      </div>
+    </div>
+  {{/if}}
+</div>
+
+<script>
+let currentQuantity = 1;
+const maxStock = {{#if product}}{{product.stock}}{{else}}0{{/if}};
+
+function changeImage(src, element) {
+  document.getElementById('currentImage').src = src;
+  document.querySelectorAll('.thumbnail').forEach(thumb => thumb.classList.remove('active'));
+  element.classList.add('active');
+}
+
+function changeQuantity(change) {
+  const newQuantity = currentQuantity + change;
+  
+  if (newQuantity >= 1 && newQuantity <= maxStock) {
+    currentQuantity = newQuantity;
+    document.getElementById('quantity').value = currentQuantity;
+    
+
+    document.querySelector('.qty-btn:first-child').disabled = currentQuantity <= 1;
+    document.querySelector('.qty-btn:last-child').disabled = currentQuantity >= maxStock;
+  }
+}
+
+async function addToCart() {
+  const productId = '{{product._id}}';
+  const quantity = currentQuantity;
+  
+  try {
+    // Crear carrito 
+    let cartId = localStorage.getItem('cartId');
+    if (!cartId) {
+      const cartResponse = await fetch('/api/carts', { method: 'POST' });
+      const cartData = await cartResponse.json();
+      cartId = cartData._id;
+      localStorage.setItem('cartId', cartId);
+    }
+
+    // Agregar producto al carrito
+    const response = await fetch(`/api/carts/${cartId}/product/${productId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ quantity: quantity })
+    });
+
+    const statusMessage = document.getElementById('statusMessage');
+    
+    if (response.ok) {
+      statusMessage.className = 'status-message success';
+      statusMessage.textContent = `✓ ${quantity} producto(s) agregado(s) al carrito exitosamente`;
+      statusMessage.style.display = 'block';
+      
+      // Ofrecer ir al carrito
+      setTimeout(() => {
+        if (confirm('¿Quieres ver tu carrito?')) {
+          window.location.href = `/carts/${cartId}`;
+        }
+      }, 1500);
+      
+    } else {
+      const error = await response.json();
+      statusMessage.className = 'status-message error';
+      statusMessage.textContent = '✗ Error: ' + error.error;
+      statusMessage.style.display = 'block';
+    }
+    
+    
+    setTimeout(() => {
+      statusMessage.style.display = 'none';
+    }, 5000);
+    
+  } catch (error) {
+    const statusMessage = document.getElementById('statusMessage');
+    statusMessage.className = 'status-message error';
+    statusMessage.textContent = '✗ Error al agregar producto al carrito';
+    statusMessage.style.display = 'block';
+    console.error(error);
+    
+    setTimeout(() => {
+      statusMessage.style.display = 'none';
+    }, 5000);
+  }
+}
+
+
+document.addEventListener('DOMContentLoaded', function() {
+  const quantityInput = document.getElementById('quantity');
+  if (quantityInput) {
+    quantityInput.addEventListener('change', function() {
+      const value = parseInt(this.value);
+      if (value >= 1 && value <= maxStock) {
+        currentQuantity = value;
+        changeQuantity(0); 
+      } else {
+        this.value = currentQuantity;
+      }
+    });
+  }
+});
+</script>
+
+{{/layout}}

@@ -2,106 +2,29 @@ import Product from '../models/Product.js'
 
 class ProductManager {
   
-  // Obtener productos con paginación, filtros y ordenamiento
+  // Método principal - Obtener productos con paginación, filtros y ordenamiento
   async getProducts(query = {}, options = {}) {
     try {
       const {
         limit = 10,
         page = 1,
-        sort = {},
-        lean = true
-      } = options
-
-      // Configurar ordenamiento
-      const sortOptions = {}
-      if (Object.keys(sort).length > 0) {
-        sortOptions.price = sort.price
-      }
-
-      // Opciones de paginación
-      const paginateOptions = {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        sort: Object.keys(sortOptions).length > 0 ? sortOptions : undefined,
-        lean: lean
-      }
-
-      const result = await Product.paginate(query, paginateOptions)
-      
-      // Construir parámetros de query para los links
-      const queryParams = new URLSearchParams()
-      if (limit !== 10) queryParams.set('limit', limit)
-      if (Object.keys(sort).length > 0) {
-        queryParams.set('sort', sort.price === 1 ? 'asc' : 'desc')
-      }
-      
-      // Agregar parámetros de filtro a los links
-      if (query.category) queryParams.set('query', query.category)
-      if (query.status !== undefined) queryParams.set('query', query.status.toString())
-      if (query.stock !== undefined) {
-        if (query.stock.$gt === 0) queryParams.set('query', 'available')
-        if (query.stock === 0) queryParams.set('query', 'unavailable')
-      }
-
-      const baseUrl = '/api/products'
-      const queryString = queryParams.toString()
-      
-      return {
-        status: 'success',
-        payload: result.docs,
-        totalPages: result.totalPages,
-        prevPage: result.hasPrevPage ? result.prevPage : null,
-        nextPage: result.hasNextPage ? result.nextPage : null,
-        page: result.page,
-        hasPrevPage: result.hasPrevPage,
-        hasNextPage: result.hasNextPage,
-        prevLink: result.hasPrevPage ? 
-          `${baseUrl}?${queryString ? queryString + '&' : ''}page=${result.prevPage}` : null,
-        nextLink: result.hasNextPage ? 
-          `${baseUrl}?${queryString ? queryString + '&' : ''}page=${result.nextPage}` : null
-      }
-    } catch (error) {
-      return {
-        status: 'error',
-        message: error.message,
-        payload: [],
-        totalPages: 0,
-        prevPage: null,
-        nextPage: null,
-        page: 1,
-        hasPrevPage: false,
-        hasNextPage: false,
-        prevLink: null,
-        nextLink: null
-      }
-    }
-  }
-
-  async getProductsLegacy(options = {}) {
-    try {
-      const {
-        limit = 10,
-        page = 1,
-        sort,
-        query
+        sort
       } = options
 
       // Configurar filtros
       const filter = {}
       
-      if (query) {
-        if (query.category) {
-          filter.category = { $regex: query.category, $options: 'i' }
-        }
-        if (query.status !== undefined) {
-          filter.status = query.status === 'true'
-        }
-        if (query.stock !== undefined) {
-          if (query.stock === 'available') {
-            filter.stock = { $gt: 0 }
-          } else if (query.stock === 'unavailable') {
-            filter.stock = 0
-          }
+      if (query.category) {
+        filter.category = { $regex: query.category, $options: 'i' }
+      }
+      if (query.status !== undefined) {
+        filter.status = query.status === 'true'
+      }
+      if (query.stock !== undefined) {
+        if (query.stock === 'available') {
+          filter.stock = { $gt: 0 }
+        } else if (query.stock === 'unavailable') {
+          filter.stock = 0
         }
       }
 
@@ -115,12 +38,42 @@ class ProductManager {
         }
       }
 
-      return await this.getProducts(filter, {
-        limit,
-        page,
-        sort: sortOptions,
+      // Opciones de paginación
+      const paginateOptions = {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        sort: Object.keys(sortOptions).length > 0 ? sortOptions : undefined,
         lean: true
-      })
+      }
+
+      const result = await Product.paginate(filter, paginateOptions)
+
+      // links de paginación con parámetros
+      const queryParams = new URLSearchParams()
+      if (query.category) queryParams.append('category', query.category)
+      if (query.status) queryParams.append('status', query.status)
+      if (query.stock) queryParams.append('stock', query.stock)
+      if (sort) queryParams.append('sort', sort)
+      queryParams.append('limit', limit)
+
+      const baseUrl = '/api/products'
+      const prevLink = result.hasPrevPage ? 
+        `${baseUrl}?page=${result.prevPage}&${queryParams.toString()}` : null
+      const nextLink = result.hasNextPage ? 
+        `${baseUrl}?page=${result.nextPage}&${queryParams.toString()}` : null
+
+      return {
+        status: 'success',
+        payload: result.docs,
+        totalPages: result.totalPages,
+        prevPage: result.hasPrevPage ? result.prevPage : null,
+        nextPage: result.hasNextPage ? result.nextPage : null,
+        page: result.page,
+        hasPrevPage: result.hasPrevPage,
+        hasNextPage: result.hasNextPage,
+        prevLink,
+        nextLink
+      }
     } catch (error) {
       return {
         status: 'error',
@@ -135,11 +88,15 @@ class ProductManager {
       if (!id) {
         throw new Error('ID de producto requerido')
       }
-
+      
       const product = await Product.findById(id).lean()
+      if (!product) {
+        return null
+      }
+      
       return product
     } catch (error) {
-      if (error.kind === 'ObjectId') {
+      if (error.name === 'CastError') {
         throw new Error('ID de producto inválido')
       }
       throw new Error('Error al buscar producto: ' + error.message)
@@ -149,19 +106,32 @@ class ProductManager {
   // Agregar producto
   async addProduct(productData) {
     try {
-      if (!productData) {
-        throw new Error('Datos del producto requeridos')
+      // Validar datos requeridos
+      const requiredFields = ['title', 'description', 'code', 'price', 'category']
+      for (const field of requiredFields) {
+        if (!productData[field]) {
+          throw new Error(`El campo ${field} es requerido`)
+        }
       }
 
       // Limpiar datos
       const cleanData = {
-        ...productData,
-        title: productData.title?.trim(),
-        description: productData.description?.trim(),
-        code: productData.code?.trim(),
-        category: productData.category?.trim(),
+        title: productData.title.toString().trim(),
+        description: productData.description.toString().trim(),
+        code: productData.code.toString().trim(),
         price: Number(productData.price),
-        stock: Number(productData.stock)
+        category: productData.category.toString().trim(),
+        stock: Number(productData.stock) || 0,
+        status: productData.status !== undefined ? Boolean(productData.status) : true,
+        thumbnails: Array.isArray(productData.thumbnails) ? productData.thumbnails : []
+      }
+
+      // Validaciones de negocio
+      if (cleanData.price < 0) {
+        throw new Error('El precio debe ser mayor o igual a 0')
+      }
+      if (cleanData.stock < 0) {
+        throw new Error('El stock debe ser mayor o igual a 0')
       }
 
       const product = new Product(cleanData)
@@ -173,7 +143,7 @@ class ProductManager {
       }
       if (error.name === 'ValidationError') {
         const messages = Object.values(error.errors).map(err => err.message)
-        throw new Error('Errores de validación: ' + messages.join(', '))
+        throw new Error('Error de validación: ' + messages.join(', '))
       }
       throw new Error('Error al crear producto: ' + error.message)
     }
@@ -186,40 +156,59 @@ class ProductManager {
         throw new Error('ID de producto requerido')
       }
 
-      if (!updates || Object.keys(updates).length === 0) {
-        throw new Error('Datos de actualización requeridos')
-      }
-
       // Limpiar datos de actualización
-      const cleanUpdates = { ...updates }
-      if (cleanUpdates.title) cleanUpdates.title = cleanUpdates.title.trim()
-      if (cleanUpdates.description) cleanUpdates.description = cleanUpdates.description.trim()
-      if (cleanUpdates.code) cleanUpdates.code = cleanUpdates.code.trim()
-      if (cleanUpdates.category) cleanUpdates.category = cleanUpdates.category.trim()
-      if (cleanUpdates.price !== undefined) cleanUpdates.price = Number(cleanUpdates.price)
-      if (cleanUpdates.stock !== undefined) cleanUpdates.stock = Number(cleanUpdates.stock)
+      const cleanUpdates = {}
+      
+      if (updates.title !== undefined) {
+        cleanUpdates.title = updates.title.toString().trim()
+      }
+      if (updates.description !== undefined) {
+        cleanUpdates.description = updates.description.toString().trim()
+      }
+      if (updates.code !== undefined) {
+        cleanUpdates.code = updates.code.toString().trim()
+      }
+      if (updates.price !== undefined) {
+        const price = Number(updates.price)
+        if (price < 0) throw new Error('El precio debe ser mayor o igual a 0')
+        cleanUpdates.price = price
+      }
+      if (updates.stock !== undefined) {
+        const stock = Number(updates.stock)
+        if (stock < 0) throw new Error('El stock debe ser mayor o igual a 0')
+        cleanUpdates.stock = stock
+      }
+      if (updates.category !== undefined) {
+        cleanUpdates.category = updates.category.toString().trim()
+      }
+      if (updates.status !== undefined) {
+        cleanUpdates.status = Boolean(updates.status)
+      }
+      if (updates.thumbnails !== undefined) {
+        cleanUpdates.thumbnails = Array.isArray(updates.thumbnails) ? updates.thumbnails : []
+      }
 
       const updatedProduct = await Product.findByIdAndUpdate(
         id,
         { $set: cleanUpdates },
-        { 
-          new: true, 
-          runValidators: true,
-          lean: true
-        }
-      )
-      
+        { new: true, runValidators: true }
+      ).lean()
+
+      if (!updatedProduct) {
+        throw new Error('Producto no encontrado')
+      }
+
       return updatedProduct
     } catch (error) {
-      if (error.kind === 'ObjectId') {
-        throw new Error('ID de producto inválido')
-      }
       if (error.code === 11000) {
         throw new Error('El código del producto ya existe')
       }
+      if (error.name === 'CastError') {
+        throw new Error('ID de producto inválido')
+      }
       if (error.name === 'ValidationError') {
         const messages = Object.values(error.errors).map(err => err.message)
-        throw new Error('Errores de validación: ' + messages.join(', '))
+        throw new Error('Error de validación: ' + messages.join(', '))
       }
       throw new Error('Error al actualizar producto: ' + error.message)
     }
@@ -235,14 +224,14 @@ class ProductManager {
       const deletedProduct = await Product.findByIdAndDelete(id)
       return !!deletedProduct
     } catch (error) {
-      if (error.kind === 'ObjectId') {
+      if (error.name === 'CastError') {
         throw new Error('ID de producto inválido')
       }
       throw new Error('Error al eliminar producto: ' + error.message)
     }
   }
 
-  // Obtener productos simples
+  // Obtener productos simples 
   async getAllProducts(limit = 50) {
     try {
       const products = await Product.find()
@@ -255,9 +244,10 @@ class ProductManager {
     }
   }
 
-  // Verificar si un producto existe
+  // Verificar si existe un producto
   async productExists(id) {
     try {
+      if (!id) return false
       const product = await Product.findById(id).select('_id').lean()
       return !!product
     } catch (error) {
@@ -266,25 +256,32 @@ class ProductManager {
   }
 
   // Obtener productos por categoría
-  async getProductsByCategory(category, options = {}) {
+  async getProductsByCategory(category, limit = 20) {
     try {
-      const filter = { 
-        category: { $regex: category, $options: 'i' } 
-      }
-      return await this.getProducts(filter, options)
+      const products = await Product.find({
+        category: { $regex: category, $options: 'i' }
+      })
+      .limit(limit)
+      .sort({ price: 1 })
+      .lean()
+      
+      return products
     } catch (error) {
       throw new Error('Error al obtener productos por categoría: ' + error.message)
     }
   }
 
-  // Obtener productos disponibles/no disponibles
-  async getProductsByAvailability(available = true, options = {}) {
+  // Obtener productos por disponibilidad
+  async getProductsByAvailability(available = true, limit = 20) {
     try {
-      const filter = available 
-        ? { stock: { $gt: 0 }, status: true }
-        : { $or: [{ stock: 0 }, { status: false }] }
+      const filter = available ? { stock: { $gt: 0 } } : { stock: 0 }
       
-      return await this.getProducts(filter, options)
+      const products = await Product.find(filter)
+        .limit(limit)
+        .sort({ stock: -1 })
+        .lean()
+      
+      return products
     } catch (error) {
       throw new Error('Error al obtener productos por disponibilidad: ' + error.message)
     }
